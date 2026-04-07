@@ -6,6 +6,7 @@ import { Session } from '@supabase/supabase-js'
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null>(null)
   const [initialized, setInitialized] = useState(false)
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null)
   const router = useRouter()
   const segments = useSegments()
 
@@ -23,14 +24,34 @@ export default function RootLayout() {
   }, [])
 
   useEffect(() => {
+    if (!session?.user) { setHasProfile(null); return }
+    supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data }) => setHasProfile(!!data))
+  }, [session])
+
+  useEffect(() => {
     if (!initialized) return
     const inAuthGroup = segments[0] === '(auth)'
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/login')
-    } else if (session && inAuthGroup) {
+    const inOnboarding = segments[0] === '(onboarding)'
+
+    if (!session) {
+      if (!inAuthGroup) router.replace('/(auth)/login')
+      return
+    }
+
+    // Wait until profile check resolves
+    if (hasProfile === null) return
+
+    if (!hasProfile && !inOnboarding) {
+      router.replace('/(onboarding)/setup')
+    } else if (hasProfile && (inAuthGroup || inOnboarding)) {
       router.replace('/(tabs)/discover')
     }
-  }, [session, initialized, segments])
+  }, [session, initialized, hasProfile, segments])
 
   return <Stack screenOptions={{ headerShown: false }} />
 }
