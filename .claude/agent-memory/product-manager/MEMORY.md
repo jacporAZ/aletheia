@@ -1,0 +1,1 @@
+- [Match Engine & Discover Feed v1 Specification](match_engine_spec.md) — Complete spec with state machine, discover logic, vouching rules, schema, and v1 scope boundary

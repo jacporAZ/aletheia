@@ -5,14 +5,12 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
-import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../lib/hooks/useProfile'
 import { Colors } from '../../constants/colors'
 
 export default function Setup() {
   const router = useRouter()
-  const [userId, setUserId] = useState<string | undefined>(undefined)
-  const { saveProfile, uploadPhoto } = useProfile(userId)
+  const { saveProfile, uploadPhoto } = useProfile()
 
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
@@ -21,18 +19,18 @@ export default function Setup() {
   const [photos, setPhotos] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
-  // Resolve user ID once
-  useState(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id))
-  })
-
   async function pickPhoto() {
     if (photos.length >= 3) {
       Alert.alert('Limit reached', 'You can add up to 3 photos.')
       return
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const { status } = await ImagePicker.requestCameraPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Camera required', 'Aletheia needs camera access to take your profile photos.')
+      return
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      cameraType: ImagePicker.CameraType.front,
       allowsEditing: true,
       aspect: [4, 5],
       quality: 0.8,
