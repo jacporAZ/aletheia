@@ -16,6 +16,7 @@ export default function Setup() {
   const [age, setAge] = useState('')
   const [bio, setBio] = useState('')
   const [city, setCity] = useState('')
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -52,6 +53,7 @@ export default function Setup() {
       return
     }
     if (!city.trim()) { Alert.alert('Required', 'Please enter your city.'); return }
+    if (!gender) { Alert.alert('Required', 'Please select your gender.'); return }
 
     setSaving(true)
     try {
@@ -62,6 +64,7 @@ export default function Setup() {
         bio: bio.trim(),
         city: city.trim(),
         photos: uploadedUrls,
+        gender: gender as 'male' | 'female' | 'other',
       })
       router.replace('/(tabs)/discover')
     } catch (e: any) {
@@ -107,6 +110,22 @@ export default function Setup() {
           value={city}
           onChangeText={setCity}
         />
+
+        <Text style={styles.label}>I am a</Text>
+        <View style={styles.genderRow}>
+          {(['male', 'female', 'other'] as const).map(option => (
+            <TouchableOpacity
+              key={option}
+              style={[styles.genderBtn, gender === option && styles.genderBtnActive]}
+              onPress={() => setGender(option)}
+            >
+              <Text style={[styles.genderBtnText, gender === option && styles.genderBtnTextActive]}>
+                {option.charAt(0).toUpperCase() + option.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <TextInput
           style={[styles.input, styles.bio]}
           placeholder="Bio (optional)"
@@ -166,6 +185,17 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   bio: { height: 100, textAlignVertical: 'top' },
+  genderRow: { flexDirection: 'row', gap: 10, marginBottom: 20 },
+  genderBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: Colors.haze,
+    backgroundColor: Colors.white, alignItems: 'center',
+  },
+  genderBtnActive: {
+    backgroundColor: Colors.ocean, borderColor: Colors.ocean,
+  },
+  genderBtnText: { fontSize: 15, color: Colors.navy, fontWeight: '500' },
+  genderBtnTextActive: { color: Colors.white },
   photoRow: { flexDirection: 'row', gap: 12, marginBottom: 32 },
   photo: { width: 90, height: 112, borderRadius: 10 },
   removeOverlay: {

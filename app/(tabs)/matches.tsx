@@ -1,15 +1,82 @@
-import { View, Text, StyleSheet } from 'react-native'
+import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useRouter } from 'expo-router'
 import { Colors } from '../../constants/colors'
+import { useMatches, MatchWithProfile } from '../../lib/hooks/useMatches'
+import MatchListItem from '../../components/MatchListItem'
 
-export default function Matches() {
+export default function MatchesTab() {
+  const router = useRouter()
+  const { matches, loading } = useMatches()
+
+  function renderItem({ item }: { item: MatchWithProfile }) {
+    return (
+      <MatchListItem
+        match={item}
+        onPress={() => router.push(`/(matches)/${item.id}` as any)}
+      />
+    )
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Matches</Text>
-    </View>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Matches</Text>
+      </View>
+
+      {loading ? (
+        <View style={styles.centre}>
+          <ActivityIndicator size="large" color={Colors.ocean} />
+        </View>
+      ) : matches.length === 0 ? (
+        <View style={styles.centre}>
+          <Text style={styles.emptyText}>No matches yet.</Text>
+          <Text style={styles.emptySubText}>Start exploring in Discover.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={matches}
+          keyExtractor={m => m.id}
+          renderItem={renderItem}
+          contentContainerStyle={styles.list}
+        />
+      )}
+    </SafeAreaView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.frost },
-  text: { fontSize: 24, color: Colors.ocean },
+  safe: {
+    flex: 1,
+    backgroundColor: Colors.frost,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.ocean,
+  },
+  list: {
+    paddingVertical: 8,
+    paddingBottom: 24,
+  },
+  centre: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: Colors.navy,
+    marginBottom: 6,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: Colors.mist,
+  },
 })

@@ -2,17 +2,23 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabase'
 import { Profile } from '../../types'
 
-type ProfileInput = Omit<Profile, 'id' | 'is_verified' | 'created_at'>
+type ProfileInput = Omit<Profile, 'id' | 'is_verified' | 'created_at' | 'gender'> & { gender?: 'male' | 'female' | 'other' }
 
-export function useProfile() {
-  const [userId, setUserId] = useState<string | undefined>(undefined)
+export function useProfile(externalUserId?: string) {
+  const [userId, setUserId] = useState<string | undefined>(externalUserId)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id))
-  }, [])
+    if (externalUserId) {
+      setUserId(externalUserId)
+    } else {
+      supabase.auth.getUser()
+        .then(({ data }) => setUserId(data.user?.id))
+        .catch((e) => { setError(e.message ?? 'Auth error'); setLoading(false) })
+    }
+  }, [externalUserId])
 
   const fetchProfile = useCallback(async () => {
     if (!userId) { setLoading(false); return }
@@ -34,9 +40,8 @@ export function useProfile() {
   useEffect(() => { fetchProfile() }, [fetchProfile])
 
   async function saveProfile(input: ProfileInput) {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) throw new Error('Not authenticated')
-    const row = { id: user.id, ...input }
+    if (!userId) throw new Error('Not authenticated')
+    const row = { id: userId, ...input }
     const { data, error: saveError } = await supabase
       .from('profiles')
       .upsert(row)
