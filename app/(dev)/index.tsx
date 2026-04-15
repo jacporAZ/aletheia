@@ -70,6 +70,43 @@ export default function DevScreen() {
     }
   }
 
+  async function completeCall(matchId: string, name: string) {
+    const key = `complete_${matchId}`
+    setActionLoading(key, true)
+    try {
+      const { error } = await supabase.rpc('dev_complete_call', { p_match_id: matchId })
+      if (error) throw error
+      Alert.alert('Call completed', `Call with ${name} marked as done. Messaging is now unlocked.`)
+      refetch()
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setActionLoading(key, false)
+    }
+  }
+
+  async function syncTestProfiles() {
+    if (!currentUserId) return
+    setActionLoading('sync_profiles', true)
+    try {
+      const { data: myProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('city')
+        .eq('id', currentUserId)
+        .single()
+      if (profileError) throw profileError
+
+      const { error } = await supabase.rpc('dev_sync_test_profiles', { p_city: myProfile.city })
+      if (error) throw error
+
+      Alert.alert('Done', `Test profiles synced to city: ${myProfile.city}`)
+    } catch (e: any) {
+      Alert.alert('Error', e.message)
+    } finally {
+      setActionLoading('sync_profiles', false)
+    }
+  }
+
   async function resetDailyLikes() {
     if (!currentUserId) return
     setActionLoading('reset_likes', true)
@@ -97,11 +134,8 @@ export default function DevScreen() {
           onPress: async () => {
             setActionLoading('delete_all', true)
             try {
-              await supabase.from('matches').delete()
-                .or(`user_a.eq.${currentUserId},user_b.eq.${currentUserId}`)
-              await supabase.from('likes').delete().eq('user_id', currentUserId)
-              await supabase.from('rejections').delete().eq('user_id', currentUserId)
-              await supabase.from('daily_like_counters').delete().eq('user_id', currentUserId)
+              const { error } = await supabase.rpc('dev_clear_match_data', { p_user_id: currentUserId })
+              if (error) throw error
               refetch()
               Alert.alert('Done', 'All match data cleared.')
             } catch (e: any) {
@@ -127,7 +161,12 @@ export default function DevScreen() {
 
         {/* Test Profiles */}
         <Section title="Test Profiles">
-          <Text style={styles.hint}>Force a mutual match with a test profile.</Text>
+          <Text style={styles.hint}>Sync test profiles to your city so they appear in Discover, then force a match.</Text>
+          <DevButton
+            label="Sync test profiles to my city"
+            loading={!!loading['sync_profiles']}
+            onPress={syncTestProfiles}
+          />
           {TEST_PROFILES.map(p => (
             <DevButton
               key={p.id}
@@ -149,7 +188,15 @@ export default function DevScreen() {
                   <Text style={styles.matchName}>{m.otherProfile.name}</Text>
                   <Text style={styles.matchStatus}>{m.status}</Text>
                 </View>
-                {m.status !== 'messaging' && (
+                {m.status === 'scheduled' && (
+                  <DevButton
+                    label="Complete call"
+                    small
+                    loading={!!loading[`complete_${m.id}`]}
+                    onPress={() => completeCall(m.id, m.otherProfile.name)}
+                  />
+                )}
+                {m.status === 'pending' && (
                   <DevButton
                     label="Unlock"
                     small

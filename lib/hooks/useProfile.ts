@@ -59,15 +59,15 @@ export function useProfile(externalUserId?: string) {
     const contentType = mimeMap[ext] ?? 'image/jpeg'
     const filename = `${user.id}/${Date.now()}.${ext}`
 
-    const response = await fetch(uri)
-    const blob = await response.blob()
+    const formData = new FormData()
+    formData.append('file', { uri, name: filename, type: contentType } as any)
 
     const { error: uploadError } = await supabase.storage
-      .from('photos')
-      .upload(filename, blob, { contentType, upsert: false })
+      .from('user_pictures')
+      .upload(filename, formData, { contentType: 'multipart/form-data', upsert: false })
     if (uploadError) throw uploadError
 
-    const { data } = supabase.storage.from('photos').getPublicUrl(filename)
+    const { data } = supabase.storage.from('user_pictures').getPublicUrl(filename)
     return data.publicUrl
   }
 

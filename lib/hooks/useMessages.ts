@@ -59,7 +59,10 @@ export function useMessages(matchId: string) {
           filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new as Message])
+          const incoming = payload.new as Message
+          setMessages(prev =>
+            prev.some(m => m.id === incoming.id) ? prev : [...prev, incoming]
+          )
         }
       )
       .subscribe()
@@ -77,10 +80,26 @@ export function useMessages(matchId: string) {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session) throw new Error('Not authenticated')
 
-    const { error: sendError } = await supabase
+    const optimistic: Message = {
+      id: `optimistic-${Date.now()}`,
+      match_id: matchId,
+      sender_id: session.user.id,
+      content: trimmed,
+      created_at: new Date().toISOString(),
+    }
+    setMessages(prev => [...prev, optimistic])
+
+    const { data, error: sendError } = await supabase
       .from('messages')
       .insert({ match_id: matchId, sender_id: session.user.id, content: trimmed })
-    if (sendError) throw sendError
+      .select()
+      .single()
+    if (sendError) {
+      setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+      throw sendError
+    }
+
+    setMessages(prev => prev.map(m => m.id === optimistic.id ? data : m))
   }
 
   return { messages, locked, loading, error, sendMessage, refetch: fetchMessages }

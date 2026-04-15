@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
@@ -17,6 +17,8 @@ export default function DiscoverTab() {
 
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null)
   const [matchedMatchId, setMatchedMatchId] = useState<string | null>(null)
+
+  useEffect(() => { fetchFeed() }, [fetchFeed])
 
   const topProfile = profiles[0] ?? null
 
