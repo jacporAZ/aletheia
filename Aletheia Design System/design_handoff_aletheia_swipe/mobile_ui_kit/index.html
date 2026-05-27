@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Aletheia — Mobile UI Kit</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin:0; background:#E5E9F0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; font-family: Inter, system-ui, sans-serif; }
+  .stage { display:flex; gap:30px; align-items:flex-start; flex-wrap:wrap; justify-content:center; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .label { font-size:12px; color:#5a6b80; letter-spacing:0.08em; text-transform:uppercase; font-weight:600; }
+  .nav { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:520px; margin: 0 auto 24px; }
+  .nav button { padding:8px 14px; border-radius:999px; border:0.5px solid #B5D4F4; background:#fff; color:#185FA5; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; }
+  .nav button.active { background:#1A6BB5; color:#fff; border-color:#1A6BB5; }
+  .header { text-align:center; margin-bottom:18px; }
+  .header h1 { font-family:'Geist',Inter,system-ui; font-weight:600; color:#0C447C; margin:0 0 6px; font-size:22px; letter-spacing:-0.01em; }
+  .header p { color:#5a6b80; margin:0; font-size:13px; }
+</style>
+</head>
+<body>
+<div>
+  <div class="header">
+    <h1>Aletheia · Mobile UI Kit</h1>
+    <p>Click-thru prototype of the iOS app. Use the buttons to jump between screens.</p>
+  </div>
+  <div id="nav"></div>
+  <div id="root"></div>
+</div>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+
+<script type="text/babel">
+const PROFILES = [
+  { seed: 0, name: 'Mira', age: 28, city: 'Brooklyn', work: 'Sound designer', verified: true,
+    bio: 'I read on the train and pretend not to. Looking for someone who actually picks a restaurant.' },
+  { seed: 1, name: 'Theo', age: 31, city: 'Brooklyn', work: 'Architect', verified: false,
+    bio: 'Long walks and short opinions. I will absolutely judge your coffee order — kindly.' },
+  { seed: 2, name: 'Nadia', age: 26, city: 'Brooklyn', work: 'PhD, neuroscience', verified: true,
+    bio: 'Currently learning to make pasta from scratch. Currently failing.' },
+];
+
+const MATCHES = [
+  { id: 1, seed: 0, name: 'Mira', age: 28, status: 'messaging', verified: true,
+    preview: 'Sounds great — Thursday at 7?', expires: 'Active',
+    city: 'Brooklyn', work: 'Sound designer',
+    bio: 'I read on the train and pretend not to. Looking for someone who actually picks a restaurant.' },
+  { id: 2, seed: 2, name: 'Nadia', age: 26, status: 'scheduled', verified: true,
+    preview: 'Call scheduled for Wed 8:00pm', expires: '6 days',
+    city: 'Brooklyn', work: 'PhD, neuroscience',
+    bio: 'Currently learning to make pasta from scratch. Currently failing.' },
+  { id: 3, seed: 1, name: 'Theo', age: 31, status: 'pending', verified: false,
+    preview: 'Schedule a call to unlock messaging', expires: '7 days',
+    city: 'Brooklyn', work: 'Architect',
+    bio: 'Long walks and short opinions.' },
+];
+
+const THREADS = [
+  { id: 1, seed: 0, name: 'Mira', time: '12m', unread: true,
+    preview: 'Sounds great — Thursday at 7?',
+    messages: [
+      { from: 'them', text: 'Hey — that call was actually fun.' },
+      { from: 'me',   text: 'It was. The cat cameo really sealed it.' },
+      { from: 'them', text: 'Coffee this week? There\'s a place on Smith St.' },
+      { from: 'me',   text: 'Yes. Thursday works.' },
+      { from: 'them', text: 'Sounds great — Thursday at 7?' },
+    ]},
+];
+
+const ME = { name: 'Alex', age: 29, city: 'Brooklyn',
+  bio: 'Software designer, runs in the morning, cooks in the evening. Trying to be a better friend.' };
+
+function App() {
+  const [screen, setScreen] = React.useState('discover');
+  const [tab, setTab] = React.useState('discover');
+  const [profileIdx, setProfileIdx] = React.useState(0);
+  const [openMatch, setOpenMatch] = React.useState(MATCHES[0]);
+  const [openThread, setOpenThread] = React.useState(THREADS[0]);
+  const [dailyCount, setDailyCount] = React.useState(3);
+
+  React.useEffect(() => { window.lucide?.createIcons(); }, [screen, tab]);
+
+  const next = (delta = 1) => {
+    setProfileIdx(i => (i + delta + PROFILES.length) % PROFILES.length);
+    setDailyCount(c => Math.min(10, c + 1));
+  };
+
+  // route to a tab
+  const goTab = (id) => {
+    setTab(id);
+    if (id === 'discover') setScreen('discover');
+    if (id === 'matches')  setScreen('matches');
+    if (id === 'messages') setScreen('messages');
+    if (id === 'profile')  setScreen('profile');
+  };
+
+  const renderScreen = () => {
+    if (screen === 'login') return <LoginScreen onSubmit={() => { setScreen('discover'); setTab('discover'); }} onSwitch={() => {}} />;
+    if (screen === 'discover') return <DiscoverScreen profile={PROFILES[profileIdx]} dailyCount={dailyCount} onLike={() => next()} onPass={() => next()} />;
+    if (screen === 'matches')  return <MatchesScreen matches={MATCHES} onOpen={(m) => { setOpenMatch(m); setScreen('match-detail'); }} />;
+    if (screen === 'match-detail') return <MatchDetailScreen match={openMatch} onBack={() => setScreen('matches')} onSchedule={() => setScreen('call')} />;
+    if (screen === 'call') return <VideoCallScreen match={openMatch} onEnd={() => setScreen('match-detail')} />;
+    if (screen === 'messages') return <MessagesScreen threads={THREADS} onOpen={(t) => { setOpenThread(t); setScreen('chat'); }} />;
+    if (screen === 'chat') return <ChatScreen thread={openThread} onBack={() => setScreen('messages')} onSend={() => {}} />;
+    if (screen === 'profile') return <ProfileScreen profile={ME} onSignOut={() => setScreen('login')} />;
+    return null;
+  };
+
+  const showTabs = ['discover','matches','messages','profile'].includes(screen);
+
+  // Nav buttons
+  const navItems = [
+    ['login','Login'],['discover','Discover'],['matches','Matches'],
+    ['match-detail','Match detail'],['call','Video call'],
+    ['messages','Messages'],['chat','Chat'],['profile','Profile'],
+  ];
+
+  return (
+    <>
+      <div className="nav">
+        {navItems.map(([id, label]) => (
+          <button key={id} className={screen === id ? 'active' : ''} onClick={() => setScreen(id)}>{label}</button>
+        ))}
+      </div>
+      <div className="stage">
+        <div className="col">
+          <IOSDevice width={390} height={844} dark={screen === 'call'}>
+            <div style={{ position:'relative', height:'100%' }}>
+              {renderScreen()}
+              {showTabs && <TabBar active={tab} onChange={goTab} />}
+            </div>
+          </IOSDevice>
+          <div className="label">{screen}</div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

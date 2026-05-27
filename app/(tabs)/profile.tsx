@@ -4,25 +4,25 @@ import {
   Alert, ScrollView, Image, ActivityIndicator,
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
+import { useRouter } from 'expo-router'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../lib/hooks/useProfile'
 import { Colors } from '../../constants/colors'
 
+const __DEV__ = process.env.NODE_ENV !== 'production'
+
 export default function ProfileScreen() {
-  const [userId, setUserId] = useState<string | undefined>(undefined)
-  const { profile, loading, saveProfile, uploadPhoto, refetch } = useProfile(userId)
+  const router = useRouter()
+  const { profile, loading, saveProfile, uploadPhoto, refetch } = useProfile()
 
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [bio, setBio] = useState('')
   const [city, setCity] = useState('')
+  const [gender, setGender] = useState<'male' | 'female' | 'other' | null>(null)
   const [photos, setPhotos] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id))
-  }, [])
 
   useEffect(() => {
     if (profile) {
@@ -30,14 +30,20 @@ export default function ProfileScreen() {
       setAge(String(profile.age))
       setBio(profile.bio ?? '')
       setCity(profile.city ?? '')
+      setGender(profile.gender ?? null)
       setPhotos(profile.photos ?? [])
     }
   }, [profile])
 
   async function pickPhoto() {
     if (photos.length >= 3) { Alert.alert('Limit reached', 'You can add up to 3 photos.'); return }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const { status } = await ImagePicker.requestCameraPermissionsAsync()
+    if (status !== 'granted') {
+      Alert.alert('Camera required', 'Aletheia needs camera access to take your profile photos.')
+      return
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      cameraType: ImagePicker.CameraType.front,
       allowsEditing: true,
       aspect: [4, 5],
       quality: 0.8,
@@ -52,13 +58,14 @@ export default function ProfileScreen() {
     if (!name.trim()) { Alert.alert('Required', 'Name cannot be empty.'); return }
     if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) { Alert.alert('Invalid age', 'Enter a valid age (18–100).'); return }
     if (!city.trim()) { Alert.alert('Required', 'City cannot be empty.'); return }
+    if (!gender) { Alert.alert('Required', 'Please select your gender.'); return }
 
     setSaving(true)
     try {
       const uploadedUrls = await Promise.all(
         photos.map(uri => uri.startsWith('http') ? Promise.resolve(uri) : uploadPhoto(uri))
       )
-      await saveProfile({ name: name.trim(), age: ageNum, bio: bio.trim(), city: city.trim(), photos: uploadedUrls })
+      await saveProfile({ name: name.trim(), age: ageNum, bio: bio.trim(), city: city.trim(), photos: uploadedUrls, gender: gender ?? undefined })
       setEditing(false)
       refetch()
     } catch (e: any) {
@@ -74,6 +81,7 @@ export default function ProfileScreen() {
       setAge(String(profile.age))
       setBio(profile.bio ?? '')
       setCity(profile.city ?? '')
+      setGender(profile.gender ?? null)
       setPhotos(profile.photos ?? [])
     }
     setEditing(false)
@@ -126,6 +134,20 @@ export default function ProfileScreen() {
           <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={Colors.mist} />
           <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="Age" placeholderTextColor={Colors.mist} keyboardType="number-pad" maxLength={3} />
           <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={Colors.mist} />
+          <Text style={styles.label}>I am a</Text>
+          <View style={styles.genderRow}>
+            {(['male', 'female', 'other'] as const).map(option => (
+              <TouchableOpacity
+                key={option}
+                style={[styles.genderBtn, gender === option && styles.genderBtnActive]}
+                onPress={() => setGender(option)}
+              >
+                <Text style={[styles.genderBtnText, gender === option && styles.genderBtnTextActive]}>
+                  {option.charAt(0).toUpperCase() + option.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
           <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Bio" placeholderTextColor={Colors.mist} multiline numberOfLines={4} />
 
           <View style={styles.row}>
@@ -140,7 +162,7 @@ export default function ProfileScreen() {
       ) : (
         <>
           <Text style={styles.name}>{profile?.name}, {profile?.age}</Text>
-          <Text style={styles.city}>{profile?.city}</Text>
+          <Text style={styles.city}>{profile?.city}{profile?.gender ? ` · ${profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)}` : ''}</Text>
           {profile?.bio ? <Text style={styles.bioText}>{profile.bio}</Text> : null}
         </>
       )}
@@ -148,6 +170,12 @@ export default function ProfileScreen() {
       <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
         <Text style={styles.signOutText}>Sign out</Text>
       </TouchableOpacity>
+
+      {__DEV__ && (
+        <TouchableOpacity style={styles.devBtn} onPress={() => router.push('/(dev)' as any)}>
+          <Text style={styles.devBtnText}>Dev Tools</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   )
 }
@@ -181,6 +209,16 @@ const styles = StyleSheet.create({
     borderRadius: 12, padding: 16, fontSize: 16, color: Colors.navy, marginBottom: 12,
   },
   bio: { height: 100, textAlignVertical: 'top' },
+  label: { fontSize: 14, color: Colors.navy, fontWeight: '600', marginBottom: 10 },
+  genderRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  genderBtn: {
+    flex: 1, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: Colors.haze,
+    backgroundColor: Colors.white, alignItems: 'center',
+  },
+  genderBtnActive: { backgroundColor: Colors.ocean, borderColor: Colors.ocean },
+  genderBtnText: { fontSize: 15, color: Colors.navy, fontWeight: '500' },
+  genderBtnTextActive: { color: Colors.white },
   row: { flexDirection: 'row', gap: 12, marginTop: 8 },
   cancelBtn: { flex: 1, borderWidth: 1, borderColor: Colors.mist, borderRadius: 12, padding: 14, alignItems: 'center' },
   cancelText: { color: Colors.mist, fontSize: 15, fontWeight: '500' },
@@ -189,4 +227,6 @@ const styles = StyleSheet.create({
   saveText: { color: Colors.white, fontSize: 15, fontWeight: '600' },
   signOutBtn: { marginTop: 48, alignItems: 'center' },
   signOutText: { color: Colors.mist, fontSize: 14 },
+  devBtn: { marginTop: 16, alignItems: 'center', paddingVertical: 8 },
+  devBtnText: { color: Colors.mist, fontSize: 12, fontFamily: 'monospace' },
 })

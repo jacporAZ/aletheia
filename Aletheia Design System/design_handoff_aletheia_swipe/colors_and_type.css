@@ -1,0 +1,229 @@
+/* Aletheia Design System — Colors & Type
+   ---------------------------------------------------
+   Source of truth: uploads/aletheia_colour_palette.png
+   Codebase reference: jacporAZ/aletheia → constants/colors.ts
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Geist:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Brand display face — used for the wordmark + hero titles */
+@font-face {
+  font-family: 'Carmilla';
+  src: url('fonts/Carmilla_Personal_Use.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ---------- Brand · Primary ---------- */
+  --ocean:    #1A6BB5;  /* Primary brand */
+  --sky:      #378ADD;  /* Buttons / CTAs */
+  --mist:     #85B7EB;  /* Highlights / inactive icons */
+  --haze:     #B5D4F4;  /* Borders / dividers */
+
+  /* ---------- Brand · Backgrounds ---------- */
+  --ice:      #EAF4FD;  /* Card surfaces */
+  --frost:    #F2F8FE;  /* Page background */
+  --white:    #FFFFFF;  /* Primary background / text on dark */
+
+  /* ---------- Brand · Text & Dark ---------- */
+  --navy:     #0C447C;  /* Headings / emphasis */
+  --deep:     #185FA5;  /* Body text on white */
+
+  /* ---------- Accent (verified ONLY) ---------- */
+  --verified: #5DCAA5;  /* Reserved exclusively for the verified user badge */
+
+  /* ---------- Semantic Color Roles ---------- */
+  --bg-page:      var(--frost);
+  --bg-surface:   var(--white);
+  --bg-card:      var(--ice);
+  --bg-inverse:   var(--navy);
+
+  --fg-primary:   var(--navy);   /* headings, emphasis */
+  --fg-secondary: var(--deep);   /* body text */
+  --fg-muted:     var(--mist);   /* placeholder, captions */
+  --fg-on-dark:   var(--white);
+
+  --brand:        var(--ocean);
+  --brand-hover:  var(--deep);
+  --cta:          var(--sky);
+  --cta-hover:    var(--ocean);
+
+  --border:       var(--haze);
+  --border-soft:  var(--ice);
+  --divider:      var(--haze);
+
+  --success:      var(--verified); /* used only on verified badge */
+
+  /* ---------- Liquid Glass · translucency tokens ---------- */
+  --glass-tint:        rgba(255, 255, 255, 0.55);
+  --glass-tint-strong: rgba(255, 255, 255, 0.72);
+  --glass-tint-navy:   rgba(12, 68, 124, 0.55);
+  --glass-border:      rgba(255, 255, 255, 0.6);
+  --glass-blur:        blur(28px) saturate(140%);
+  --glass-blur-sm:     blur(14px) saturate(130%);
+
+  /* ---------- Type · Families ---------- */
+  --font-brand:   'Carmilla', 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;  /* wordmark + hero moments */
+  --font-display: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;              /* section headings */
+  --font-ui:      'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;                      /* default UI */
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---------- Type · Scale (mobile-first, 4pt baseline) ---------- */
+  --fs-12: 12px;  --lh-12: 16px;
+  --fs-13: 13px;  --lh-13: 18px;
+  --fs-14: 14px;  --lh-14: 20px;
+  --fs-15: 15px;  --lh-15: 22px;
+  --fs-16: 16px;  --lh-16: 24px;
+  --fs-18: 18px;  --lh-18: 26px;
+  --fs-20: 20px;  --lh-20: 28px;
+  --fs-24: 24px;  --lh-24: 32px;
+  --fs-28: 28px;  --lh-28: 36px;
+  --fs-32: 32px;  --lh-32: 40px;
+  --fs-42: 42px;  --lh-42: 50px;
+  --fs-56: 56px;  --lh-56: 62px;
+
+  --tracking-tight:   -0.01em;
+  --tracking-normal:  0em;
+  --tracking-wide:    0.08em;
+  --tracking-wordmark: 0.18em;  /* the ALETHEIA wordmark */
+
+  /* ---------- Spacing (4pt grid) ---------- */
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---------- Radius ---------- */
+  --radius-xs: 6px;
+  --radius-sm: 10px;     /* photo tile */
+  --radius-md: 12px;     /* inputs / buttons */
+  --radius-lg: 16px;
+  --radius-xl: 24px;     /* cards */
+  --radius-2xl: 32px;
+  --radius-pill: 999px;
+  --radius-app-icon: 22%;  /* iOS-style superellipse approximation */
+
+  /* ---------- Elevation (very soft, blue-tinted) ---------- */
+  --shadow-xs:  0 1px 2px rgba(12, 68, 124, 0.05);
+  --shadow-sm:  0 2px 8px rgba(12, 68, 124, 0.06);
+  --shadow-md:  0 8px 24px rgba(12, 68, 124, 0.08);
+  --shadow-lg:  0 18px 40px rgba(12, 68, 124, 0.12);
+  --shadow-xl:  0 28px 60px rgba(12, 68, 124, 0.18);
+
+  /* Glass uses a halo + an inner light edge */
+  --shadow-glass:
+    0 12px 40px rgba(12, 68, 124, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.6);
+
+  /* ---------- Motion ---------- */
+  --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --dur-fast:   140ms;
+  --dur-base:   220ms;
+  --dur-slow:   420ms;
+}
+
+/* ---------- Semantic type roles ---------- */
+
+html, body {
+  font-family: var(--font-ui);
+  color: var(--fg-secondary);
+  background: var(--bg-page);
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.wordmark {
+  font-family: var(--font-brand);
+  font-weight: 400;
+  letter-spacing: var(--tracking-wordmark);
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+.h1, h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-32);
+  line-height: var(--lh-32);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-primary);
+}
+.h2, h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-28);
+  line-height: var(--lh-28);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg-primary);
+}
+.h3, h3 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-20);
+  line-height: var(--lh-20);
+  color: var(--fg-primary);
+}
+.h4, h4 {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+  color: var(--fg-primary);
+}
+
+.eyebrow {
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.body, p {
+  font-family: var(--font-ui);
+  font-weight: 400;
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+  color: var(--fg-secondary);
+  text-wrap: pretty;
+}
+
+.body-lg {
+  font-size: var(--fs-18);
+  line-height: var(--lh-18);
+}
+
+.caption {
+  font-size: var(--fs-13);
+  line-height: var(--lh-13);
+  color: var(--fg-muted);
+}
+
+.label {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: var(--fs-14);
+  line-height: var(--lh-14);
+  color: var(--fg-primary);
+}
+
+.mono, code, pre {
+  font-family: var(--font-mono);
+  font-size: var(--fs-13);
+}

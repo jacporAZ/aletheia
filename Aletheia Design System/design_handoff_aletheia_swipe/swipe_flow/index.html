@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Aletheia — Swipe & Match</title>
+<link rel="stylesheet" href="../../colors_and_type.css">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+  body { margin:0; background:linear-gradient(160deg,#EAF4FD 0%,#F2F8FE 100%); min-height:100vh; padding:40px 20px 60px; font-family: Inter, system-ui, sans-serif; }
+  .wrap { max-width:1400px; margin:0 auto; }
+  .head { text-align:center; margin-bottom:28px; }
+  .head h1 { font-family:'Geist',Inter; font-weight:600; color:#0C447C; margin:0 0 6px; font-size:26px; letter-spacing:-0.01em; }
+  .head p { color:#5a6b80; margin:0; font-size:14px; max-width:620px; margin-left:auto; margin-right:auto; line-height:1.5; }
+  .toggle { display:flex; justify-content:center; gap:10px; margin-bottom:28px; flex-wrap:wrap; }
+  .toggle button { padding:10px 18px; border-radius:999px; border:0.5px solid #B5D4F4; background:#fff; color:#185FA5; font-size:13px; font-weight:500; cursor:pointer; font-family:inherit; transition:all 220ms cubic-bezier(0.2,0.7,0.2,1); }
+  .toggle button.active { background:#1A6BB5; color:#fff; border-color:#1A6BB5; box-shadow:0 6px 18px rgba(26,107,181,0.3); }
+  .stage { display:flex; gap:32px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .col { display:flex; flex-direction:column; align-items:center; gap:14px; }
+  .var-label { font-size:11px; color:#5a6b80; letter-spacing:0.12em; text-transform:uppercase; font-weight:700; padding:6px 14px; border-radius:999px; background:rgba(255,255,255,0.8); border:0.5px solid #B5D4F4; }
+  .var-sub { font-size:11px; color:#85B7EB; font-family:'JetBrains Mono',monospace; margin-top:-8px; }
+  .hint { text-align:center; font-size:12px; color:#85B7EB; margin-top:18px; font-family:'JetBrains Mono',monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>Aletheia · Swipe & Match</h1>
+    <p>Three Hinge-style variants — all light, scrollable, react per section. Each takes the same content and arranges it differently.</p>
+  </div>
+  <div id="toggle"></div>
+  <div id="root"></div>
+</div>
+
+<script type="text/babel" src="../../ui_kits/mobile/ios-frame.jsx"></script>
+<script type="text/babel" src="../../ui_kits/mobile/components.jsx"></script>
+<script type="text/babel" src="swipe.jsx"></script>
+<script type="text/babel" src="swipe_cd.jsx"></script>
+
+<script type="text/babel">
+function App() {
+  const [personIdx, setPersonIdx] = React.useState(0);
+  const [dailyCount, setDailyCount] = React.useState(3);
+  const [mA, setMA] = React.useState(null);
+  const [mC, setMC] = React.useState(null);
+  const [mD, setMD] = React.useState(null);
+
+  const person = SAMPLES[personIdx];
+  const next = () => {
+    setPersonIdx(i => (i + 1) % SAMPLES.length);
+    setDailyCount(c => Math.min(10, c + 1));
+    setMA(null); setMC(null); setMD(null);
+  };
+  const make = (setter) => (r) => { if (r === 'pass') next(); else setter({ reaction: r }); };
+
+  return (
+    <>
+      <div className="toggle">
+        <button onClick={next}>Next profile →</button>
+        <button onClick={() => setPersonIdx(0)}>Mira</button>
+        <button onClick={() => setPersonIdx(1)}>Nadia</button>
+        <button onClick={() => setPersonIdx(2)}>Theo</button>
+        <button onClick={() => setPersonIdx(3)}>Priya</button>
+      </div>
+      <div className="stage">
+        <div className="col">
+          <div className="var-label">Variant A · Cards</div>
+          <div className="var-sub">sectioned cards, glass name plate</div>
+          <IOSDevice width={390} height={844}>
+            <div style={{ position:'relative', height:'100%' }}>
+              <ProfileCardA person={person} dailyCount={dailyCount} onReact={make(setMA)} />
+              {mA && <MatchMoment person={person} reaction={mA.reaction} onDismiss={() => setMA(null)} onPrimary={() => { setMA(null); next(); }} />}
+            </div>
+          </IOSDevice>
+        </div>
+        <div className="col">
+          <div className="var-label">Variant B · Editorial</div>
+          <div className="var-sub">pull-quote prompts, magazine rhythm</div>
+          <IOSDevice width={390} height={844}>
+            <div style={{ position:'relative', height:'100%' }}>
+              <ProfileCardC person={person} dailyCount={dailyCount} onReact={make(setMC)} />
+              {mC && <MatchMoment person={person} reaction={mC.reaction} onDismiss={() => setMC(null)} onPrimary={() => { setMC(null); next(); }} />}
+            </div>
+          </IOSDevice>
+        </div>
+        <div className="col">
+          <div className="var-label">Variant C · Timeline</div>
+          <div className="var-sub">compact header, interleaved photos + prompts</div>
+          <IOSDevice width={390} height={844}>
+            <div style={{ position:'relative', height:'100%' }}>
+              <ProfileCardD person={person} dailyCount={dailyCount} onReact={make(setMD)} />
+              {mD && <MatchMoment person={person} reaction={mD.reaction} onDismiss={() => setMD(null)} onPrimary={() => { setMD(null); next(); }} />}
+            </div>
+          </IOSDevice>
+        </div>
+      </div>
+      <div className="hint">tap ♥ / video / user+ on any section for the match moment · ✕ advances</div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
