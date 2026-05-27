@@ -1,6 +1,7 @@
 import { View, Text, FlatList, ActivityIndicator, StyleSheet } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
+import { Heart } from 'lucide-react-native'
 import { Colors } from '../../constants/colors'
 import { useMatches, MatchWithProfile } from '../../lib/hooks/useMatches'
 import MatchListItem from '../../components/MatchListItem'
@@ -20,7 +21,9 @@ export default function MatchesTab() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
+        <Heart size={20} color={Colors.ocean} strokeWidth={2} />
         <Text style={styles.title}>Matches</Text>
       </View>
 
@@ -30,7 +33,8 @@ export default function MatchesTab() {
         </View>
       ) : matches.length === 0 ? (
         <View style={styles.centre}>
-          <Text style={styles.emptyText}>No matches yet.</Text>
+          <Heart size={48} color={Colors.haze} strokeWidth={1.5} />
+          <Text style={styles.emptyText}>No matches yet</Text>
           <Text style={styles.emptySubText}>Start exploring in Discover.</Text>
         </View>
       ) : (
@@ -51,29 +55,34 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.frost,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     paddingHorizontal: 20,
     paddingTop: 8,
     paddingBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Colors.ocean,
+    fontSize: 24,
+    fontWeight: '600',
+    color: Colors.navy,
+    letterSpacing: -0.24,
   },
   list: {
-    paddingVertical: 8,
+    paddingTop: 4,
     paddingBottom: 24,
   },
   centre: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 12,
   },
   emptyText: {
     fontSize: 17,
     fontWeight: '600',
     color: Colors.navy,
-    marginBottom: 6,
+    marginTop: 4,
   },
   emptySubText: {
     fontSize: 14,
