@@ -9,7 +9,7 @@ import {
   ActivityIndicator, Alert, StyleSheet,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Stack } from 'expo-router'
+import { Redirect, Stack } from 'expo-router'
 import { Colors } from '../../constants/colors'
 import { supabase } from '../../lib/supabase'
 import { useMatches } from '../../lib/hooks/useMatches'
@@ -22,6 +22,10 @@ const TEST_PROFILES = [
 type ActionState = Record<string, boolean>
 
 export default function DevScreen() {
+  if (!__DEV__) {
+    return <Redirect href="/(tabs)/profile" />
+  }
+
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState<ActionState>({})
   const { matches, refetch } = useMatches()

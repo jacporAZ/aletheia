@@ -6,6 +6,15 @@ import {
 import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
 import { useProfile } from '../../lib/hooks/useProfile'
+import {
+  MAX_BIO_LENGTH,
+  MAX_CITY_LENGTH,
+  MAX_NAME_LENGTH,
+  validateProfileInput,
+  validateSelectedPhoto,
+  sanitizeMultilineInput,
+  sanitizeSingleLineInput,
+} from '../../lib/security'
 import { Colors } from '../../constants/colors'
 
 export default function Setup() {
@@ -37,7 +46,13 @@ export default function Setup() {
       quality: 0.8,
     })
     if (!result.canceled) {
-      setPhotos(prev => [...prev, result.assets[0].uri])
+      const asset = result.assets[0]
+      const validationError = validateSelectedPhoto(asset)
+      if (validationError) {
+        Alert.alert('Invalid photo', validationError)
+        return
+      }
+      setPhotos(prev => [...prev, asset.uri])
     }
   }
 
@@ -46,23 +61,32 @@ export default function Setup() {
   }
 
   async function handleSave() {
-    if (!name.trim()) { Alert.alert('Required', 'Please enter your name.'); return }
+    const sanitizedName = sanitizeSingleLineInput(name)
+    const sanitizedCity = sanitizeSingleLineInput(city)
+    const sanitizedBio = sanitizeMultilineInput(bio)
     const ageNum = parseInt(age, 10)
-    if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) {
-      Alert.alert('Invalid age', 'Please enter a valid age (18–100).')
+    const validationError = validateProfileInput({
+      name: sanitizedName,
+      age: ageNum,
+      city: sanitizedCity,
+      bio: sanitizedBio,
+      gender,
+      photoCount: photos.length,
+    })
+
+    if (validationError) {
+      Alert.alert('Invalid profile', validationError)
       return
     }
-    if (!city.trim()) { Alert.alert('Required', 'Please enter your city.'); return }
-    if (!gender) { Alert.alert('Required', 'Please select your gender.'); return }
 
     setSaving(true)
     try {
       const uploadedUrls = await Promise.all(photos.map(uri => uploadPhoto(uri)))
       await saveProfile({
-        name: name.trim(),
+        name: sanitizedName,
         age: ageNum,
-        bio: bio.trim(),
-        city: city.trim(),
+        bio: sanitizedBio,
+        city: sanitizedCity,
         photos: uploadedUrls,
         gender: gender as 'male' | 'female' | 'other',
       })
@@ -93,6 +117,7 @@ export default function Setup() {
           placeholderTextColor={Colors.mist}
           value={name}
           onChangeText={setName}
+          maxLength={MAX_NAME_LENGTH}
         />
         <TextInput
           style={styles.input}
@@ -109,6 +134,7 @@ export default function Setup() {
           placeholderTextColor={Colors.mist}
           value={city}
           onChangeText={setCity}
+          maxLength={MAX_CITY_LENGTH}
         />
 
         <Text style={styles.label}>I am a</Text>
@@ -134,6 +160,7 @@ export default function Setup() {
           onChangeText={setBio}
           multiline
           numberOfLines={4}
+          maxLength={MAX_BIO_LENGTH}
         />
 
         <Text style={styles.label}>Photos (up to 3)</Text>
