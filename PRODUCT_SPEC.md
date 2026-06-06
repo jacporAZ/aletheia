@@ -2,8 +2,60 @@
 
 **Version:** 1.0  
 **Date:** April 10, 2026  
-**Status:** Ready for Development  
+**Last Updated:** June 6, 2026  
+**Status:** In Development — Core flows built, Agora integration outstanding  
 **Scope:** MVP — Match Engine, Discover Feed, Video Call Scheduling, and Messaging
+
+---
+
+## 0. Current Build Status
+
+> Last reviewed: **June 6, 2026**. The CLAUDE.md build table is outdated — this section reflects the actual state of the codebase.
+
+### ✅ Built & Working
+
+| Area | File(s) | Notes |
+|------|---------|-------|
+| Project scaffold | `app.json`, `package.json`, `tsconfig.json` | Expo SDK 54, React Native 0.81, TypeScript |
+| Supabase connection | `lib/supabase.ts` | Auth, SecureStore session persistence |
+| Auth screens | `app/(auth)/login.tsx`, `app/(auth)/register.tsx` | Email/password sign-in and registration |
+| Root navigation & auth gating | `app/_layout.tsx` | Session-aware routing: unauthenticated → login, no profile → onboarding, otherwise → tabs |
+| Onboarding / profile setup | `app/(onboarding)/setup.tsx` | Name, age, city, gender, front-camera photos (up to 3) |
+| Database schema | `types/index.ts` (full type map) | `profiles`, `matches`, `likes`, `rejections`, `vouches`, `friendships`, `video_calls`, `messages`, `daily_like_counters` |
+| Discover feed | `app/(tabs)/discover.tsx`, `lib/hooks/useDiscover.ts` | Hinge-style card UI, reaction rail (like / pass / call / vouch), daily cap (10), FoF fallback tier, MutualMatchModal overlay |
+| Like & match engine | `lib/hooks/useLike.ts`, `lib/hooks/useDiscover.ts` | Mutual like → match creation, daily counter, reject tracking |
+| Matches tab | `app/(tabs)/matches.tsx`, `lib/hooks/useMatches.ts` | List view with status badges, expiry, loading/empty states |
+| Match detail screen | `app/(matches)/[id].tsx` | Hero photo, status pill, expiry countdown, messaging-locked card, call info, renew CTA, vouch section |
+| Call scheduling UI | `components/CallScheduler.tsx`, `lib/hooks/useMatch.ts` | Date/time picker, schedules call in DB, transitions match to `scheduled` |
+| Messages / chat screen | `app/(messages)/[matchId].tsx`, `lib/hooks/useMessages.ts` | Full chat UI, locked-state redirect, real-time capable |
+| Messages tab | `app/(tabs)/messages.tsx` | Filters to `messaging` matches only; empty state explains video call requirement |
+| Friends-of-friends (vouch) | `lib/hooks/useVouch.ts`, `app/(matches)/[id].tsx` | Vouch eligibility checks (call completed + friendship + cross-gender), submit vouch, `get_fof_profiles` Supabase RPC |
+| Profile screen | `app/(tabs)/profile.tsx` | View & edit name/age/bio/city/gender, front-camera photo management, sign out |
+| Design system | `constants/colors.ts`, `constants/tokens.ts` | Full colour palette, spacing, radii, shadows |
+| Dev tools | `app/(dev)/index.tsx` | Force match, complete call, unlock messaging, sync test profiles, reset daily likes, clear match data |
+
+### ⚠️ Scheduled but Not Yet Wired
+
+| Area | Status | Blocker |
+|------|--------|---------|
+| Actual video call (in-call screen) | UI schedule flow built; no call screen exists | **Agora SDK not integrated.** Calls can be scheduled and marked complete via Dev Tools, but users cannot actually conduct a call in the app. |
+| Push notifications | `expo-notifications` package installed | No notification registration, permission request, or send logic implemented anywhere in the codebase. Notification hooks referenced in the spec (on match, on call scheduled, reminders) are all missing. |
+| Missed call auto-handling | Spec defined | Requires Agora webhook or server-side cron to detect missed calls and revert match to `pending`. No backend job exists. |
+| Call accept/decline by second user | Spec defined | Currently the other user has no in-app flow to accept or decline a proposed call time before it is committed. |
+
+### ❌ Not Started (Explicitly v2 or Later)
+
+| Area | Notes |
+|------|-------|
+| Agora SDK integration | Core dependency for actual video calls. Zero code written. |
+| Stripe Identity verification | Optional ID verification for premium badge. Out of v1 scope per spec. |
+| RevenueCat subscriptions | Monetisation layer. Out of v1 scope per spec. |
+| Blocking & reporting | Safety feature deferred to v2. |
+| App Store / TestFlight submission | EAS config (`eas.json`) exists; no build or submission has been made. |
+
+### Summary
+
+The app has a complete user-facing UI for the full match-to-message journey: discover → like → match → schedule call → (dev-unlock) → message. All screens, hooks, and the database schema are in place. The **only hard blocker** before the flow works end-to-end for real users is the **Agora integration** (the actual video call). Everything else is either built or explicitly deferred to v2.
 
 ---
 
