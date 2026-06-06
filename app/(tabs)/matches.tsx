@@ -24,7 +24,12 @@ export default function MatchesTab() {
       {/* Header */}
       <View style={styles.header}>
         <Heart size={20} color={Colors.ocean} strokeWidth={2} />
-        <Text style={styles.title}>Matches</Text>
+        <View>
+          <Text style={styles.title}>Matches</Text>
+          {!loading && matches.length > 0 && (
+            <Text style={styles.subtitle}>{matches.length} active</Text>
+          )}
+        </View>
       </View>
 
       {loading ? (
@@ -67,6 +72,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.navy,
     letterSpacing: -0.24,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Colors.mist,
+    marginTop: 1,
   },
   list: {
     paddingTop: 4,

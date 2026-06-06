@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import * as ImagePicker from 'expo-image-picker'
 import { useRouter } from 'expo-router'
+import { ShieldCheck, Users, Bell, Settings, ChevronRight } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../lib/hooks/useProfile'
 import { Colors } from '../../constants/colors'
@@ -164,6 +165,29 @@ export default function ProfileScreen() {
           <Text style={styles.name}>{profile?.name}, {profile?.age}</Text>
           <Text style={styles.city}>{profile?.city}{profile?.gender ? ` · ${profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)}` : ''}</Text>
           {profile?.bio ? <Text style={styles.bioText}>{profile.bio}</Text> : null}
+
+          {/* Settings rows */}
+          <View style={styles.settingsCard}>
+            {[
+              { Icon: ShieldCheck, label: 'Trust & verification', detail: profile?.is_verified ? 'Verified' : undefined },
+              { Icon: Users,       label: 'Friends & vouches',    detail: undefined },
+              { Icon: Bell,        label: 'Notifications',        detail: undefined },
+              { Icon: Settings,    label: 'Settings',             detail: undefined },
+            ].map(({ Icon, label, detail }, i, arr) => (
+              <TouchableOpacity
+                key={label}
+                style={[styles.settingsRow, i < arr.length - 1 && styles.settingsRowBorder]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={label}
+              >
+                <Icon size={20} color={Colors.ocean} strokeWidth={1.75} />
+                <Text style={styles.settingsLabel}>{label}</Text>
+                {detail ? <Text style={styles.settingsDetail}>{detail}</Text> : null}
+                <ChevronRight size={16} color={Colors.mist} strokeWidth={1.75} />
+              </TouchableOpacity>
+            ))}
+          </View>
         </>
       )}
 
@@ -185,7 +209,7 @@ const styles = StyleSheet.create({
   container: { padding: 24, paddingTop: 60 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.frost },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  heading: { fontSize: 28, fontWeight: '700', color: Colors.ocean },
+  heading: { fontSize: 32, fontWeight: '600', color: Colors.navy },
   editBtn: { fontSize: 16, color: Colors.sky, fontWeight: '500' },
   photoRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   photo: { width: 90, height: 112, borderRadius: 10 },
@@ -203,7 +227,7 @@ const styles = StyleSheet.create({
   photoAddText: { fontSize: 32, color: Colors.mist },
   name: { fontSize: 24, fontWeight: '700', color: Colors.navy },
   city: { fontSize: 16, color: Colors.mist, marginTop: 4, marginBottom: 12 },
-  bioText: { fontSize: 15, color: Colors.navy, lineHeight: 22 },
+  bioText: { fontSize: 15, color: Colors.navy, lineHeight: 22, marginBottom: 24 },
   input: {
     backgroundColor: Colors.white, borderWidth: 0.5, borderColor: Colors.haze,
     borderRadius: 12, padding: 16, fontSize: 16, color: Colors.navy, marginBottom: 12,
@@ -225,8 +249,36 @@ const styles = StyleSheet.create({
   saveBtn: { flex: 2, backgroundColor: Colors.ocean, borderRadius: 12, padding: 14, alignItems: 'center' },
   btnDisabled: { opacity: 0.6 },
   saveText: { color: Colors.white, fontSize: 15, fontWeight: '600' },
-  signOutBtn: { marginTop: 48, alignItems: 'center' },
+  signOutBtn: { marginTop: 32, alignItems: 'center' },
   signOutText: { color: Colors.mist, fontSize: 14 },
   devBtn: { marginTop: 16, alignItems: 'center', paddingVertical: 8 },
   devBtnText: { color: Colors.mist, fontSize: 12, fontFamily: 'monospace' },
+  settingsCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    borderWidth: 0.5,
+    borderColor: Colors.haze,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  settingsRowBorder: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: Colors.haze,
+  },
+  settingsLabel: {
+    flex: 1,
+    fontSize: 15,
+    color: Colors.navy,
+  },
+  settingsDetail: {
+    fontSize: 13,
+    color: Colors.mist,
+  },
 })
