@@ -169,20 +169,23 @@ export default function ProfileScreen() {
           {/* Settings rows */}
           <View style={styles.settingsCard}>
             {[
-              { Icon: ShieldCheck, label: 'Trust & verification',  detail: profile?.is_verified ? 'Verified' : undefined },
-              { Icon: Users,       label: 'Friends & vouches',     detail: undefined },
-              { Icon: Bell,        label: 'Notifications',         detail: undefined },
-              { Icon: Settings,    label: 'Settings',              detail: undefined },
+              { Icon: ShieldCheck, label: 'Trust & verification', detail: profile?.is_verified ? 'Verified' : undefined },
+              { Icon: Users,       label: 'Friends & vouches',    detail: undefined },
+              { Icon: Bell,        label: 'Notifications',        detail: undefined },
+              { Icon: Settings,    label: 'Settings',             detail: undefined },
             ].map(({ Icon, label, detail }, i, arr) => (
-              <View
+              <TouchableOpacity
                 key={label}
                 style={[styles.settingsRow, i < arr.length - 1 && styles.settingsRowBorder]}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={label}
               >
                 <Icon size={20} color={Colors.ocean} strokeWidth={1.75} />
                 <Text style={styles.settingsLabel}>{label}</Text>
                 {detail ? <Text style={styles.settingsDetail}>{detail}</Text> : null}
                 <ChevronRight size={16} color={Colors.mist} strokeWidth={1.75} />
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         </>
