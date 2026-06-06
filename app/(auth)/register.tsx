@@ -45,7 +45,7 @@ export default function Register() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Text style={styles.logo}>Aletheia</Text>
+      <Text style={styles.logo}>ALETHEIA</Text>
       <Text style={styles.tagline}>Date the real person.</Text>
 
       <TextInput
@@ -92,10 +92,10 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   logo: {
-    fontFamily: 'serif',
-    fontSize: 42,
-    color: Colors.ocean,
-    letterSpacing: 3,
+    fontSize: 32,
+    fontWeight: '300',
+    color: Colors.navy,
+    letterSpacing: 10,
     marginBottom: 8,
   },
   tagline: {

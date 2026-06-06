@@ -171,7 +171,7 @@ export default function Setup() {
 const styles = StyleSheet.create({
   scroll: { backgroundColor: Colors.frost },
   container: { padding: 24, paddingTop: 60 },
-  heading: { fontSize: 28, fontWeight: '700', color: Colors.ocean, marginBottom: 4 },
+  heading: { fontSize: 32, fontWeight: '600', color: Colors.navy, marginBottom: 4 },
   sub: { fontSize: 14, color: Colors.mist, marginBottom: 32 },
   label: { fontSize: 14, color: Colors.navy, fontWeight: '600', marginBottom: 12, marginTop: 8 },
   input: {
