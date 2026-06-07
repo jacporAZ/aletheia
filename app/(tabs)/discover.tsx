@@ -3,7 +3,7 @@
  * Hinge-style vertical scroll. Each profile section is a raised card
  * with a per-section reaction rail. Reactions trigger the MatchMoment overlay.
  */
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -17,15 +17,13 @@ import { BlurView } from 'expo-blur'
 import {
   X,
   Heart,
-  Video,
-  UserPlus,
   Briefcase,
   GraduationCap,
   ShieldCheck,
   Users,
   Activity,
 } from 'lucide-react-native'
-import { useRouter } from 'expo-router'
+import { useRouter, useFocusEffect } from 'expo-router'
 
 import { Colors, Shadow, Radius, Space } from '../../constants/tokens'
 import { useDiscover, MAX_DAILY_LIKES } from '../../lib/hooks/useDiscover'
@@ -59,10 +57,8 @@ const REACTIONS: Array<{
   Icon: React.ComponentType<{ size: number; color: string }>
   color: string
 }> = [
-  { id: 'pass',  Icon: X,        color: Colors.mist },
-  { id: 'like',  Icon: Heart,    color: Colors.ocean },
-  { id: 'call',  Icon: Video,    color: Colors.verified },
-  { id: 'vouch', Icon: UserPlus, color: Colors.sky },
+  { id: 'pass', Icon: X,     color: Colors.mist },
+  { id: 'like', Icon: Heart, color: Colors.ocean },
 ]
 
 function ReactionRail({
@@ -91,11 +87,9 @@ function ReactionRail({
             },
           ]}
         >
-          <BlurView intensity={70} tint="light" style={[styles.reactionBlur, { borderRadius: size / 2 }]}>
-            <View style={[styles.reactionInner, { borderRadius: size / 2 }]}>
-              <Icon size={iconSize} color={color} />
-            </View>
-          </BlurView>
+          <View style={[styles.reactionInner, { borderRadius: size / 2 }]}>
+            <Icon size={iconSize} color={color} />
+          </View>
         </Pressable>
       ))}
     </View>
@@ -349,7 +343,7 @@ export default function DiscoverTab() {
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null)
   const [matchedMatchId, setMatchedMatchId] = useState<string | null>(null)
 
-  useEffect(() => { fetchFeed() }, [fetchFeed])
+  useFocusEffect(useCallback(() => { fetchFeed() }, [fetchFeed]))
 
   const likesUsed = MAX_DAILY_LIKES - likesRemaining
   const topProfile = profiles[0] ?? null
@@ -369,27 +363,21 @@ export default function DiscoverTab() {
       return
     }
 
-    // For like / call / vouch — remove from feed, record in DB, show overlay
     removeProfile(profile.id)
 
-    // Both 'like' and 'call' register as a like in the DB.
-    // 'vouch' will have its own RPC when that feature is built.
-    if (reaction === 'like' || reaction === 'call') {
-      const result = await submitLike(profile.id)
-      if (result.matchId) setMatchedMatchId(result.matchId)
-    }
+    const result = await submitLike(profile.id)
+    if (result.matchId) setMatchedMatchId(result.matchId)
 
     setMatchedProfile(profile)
-    setMatchReaction(reaction)
+    setMatchReaction('like')
     setMatchMomentVisible(true)
   }, [topProfile, submitting, profiles, removeProfile, submitLike, submitReject, fetchFeed])
 
   function handleMatchMomentPrimary() {
     setMatchMomentVisible(false)
-    if (matchedMatchId && matchReaction === 'like') {
+    if (matchedMatchId) {
       router.push(`/(matches)/${matchedMatchId}` as any)
     }
-    // Call / vouch flows TBD
     setMatchedMatchId(null)
     if (profiles.length <= 1) fetchFeed()
   }
@@ -623,16 +611,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.6)',
     ...Shadow.sm,
   },
-  reactionBlur: {
-    overflow: 'hidden',
-  },
   reactionInner: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(255,255,255,0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
   },
 
   // ── Basics ──

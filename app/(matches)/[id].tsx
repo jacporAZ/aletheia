@@ -10,11 +10,11 @@ import {
   Clock,
   Calendar,
   MessageCircle,
-  XCircle,
+  CircleX,
   Video,
   UserPlus,
   Lock,
-  CheckCircle,
+  CircleCheck,
 } from 'lucide-react-native'
 import { Colors } from '../../constants/colors'
 import { Shadow, Radius, Space } from '../../constants/tokens'
@@ -31,8 +31,8 @@ const STATUS_CONFIG: Record<string, {
 }> = {
   pending:   { label: 'Awaiting call',        color: Colors.sky,      Icon: Clock },
   scheduled: { label: 'Call scheduled',       color: Colors.ocean,    Icon: Calendar },
-  messaging: { label: 'Messaging unlocked',   color: Colors.verified, Icon: CheckCircle },
-  expired:   { label: 'Expired',              color: Colors.mist,     Icon: XCircle },
+  messaging: { label: 'Messaging unlocked',   color: Colors.verified, Icon: CircleCheck },
+  expired:   { label: 'Expired',              color: Colors.mist,     Icon: CircleX },
 }
 
 // ─── Avatar background fallback palette ───────────────────────────────────
@@ -246,7 +246,7 @@ export default function MatchDetailScreen() {
             </View>
             {alreadyVouched ? (
               <View style={styles.vouchedRow}>
-                <CheckCircle size={14} color={Colors.verified} strokeWidth={2} />
+                <CircleCheck size={14} color={Colors.verified} strokeWidth={2} />
                 <Text style={styles.vouchedText}>You've vouched for {otherProfile.name}</Text>
               </View>
             ) : vouchResult?.canVouch ? (
