@@ -4,7 +4,7 @@ import {
   Clock,
   Calendar,
   MessageCircle,
-  XCircle,
+  CircleX,
   ChevronRight,
 } from 'lucide-react-native'
 import { Colors } from '../constants/colors'
@@ -29,7 +29,7 @@ const STATUS_ICONS: Record<string, React.ComponentType<{ size: number; color: st
   pending:   Clock,
   scheduled: Calendar,
   messaging: MessageCircle,
-  expired:   XCircle,
+  expired:   CircleX,
 }
 
 // Gradient-style avatar fallback — matches Discover screen placeholder palette

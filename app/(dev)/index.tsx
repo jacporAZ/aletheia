@@ -9,7 +9,7 @@ import {
   ActivityIndicator, Alert, StyleSheet,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Stack } from 'expo-router'
+import { Redirect, Stack } from 'expo-router'
 import { Colors } from '../../constants/colors'
 import { supabase } from '../../lib/supabase'
 import { useMatches } from '../../lib/hooks/useMatches'
@@ -21,9 +21,83 @@ const TEST_PROFILES = [
 
 type ActionState = Record<string, boolean>
 
+// Profile ID for the test user used as the "incoming" sender in realtime checks.
+const SIMULATE_SENDER_ID = TEST_PROFILES[0].id
+
+type TestStatus = 'idle' | 'running' | 'pass' | 'fail' | 'warn'
+
+// Each test returns a plain result object — no external test framework involved.
+type TestResult = {
+  passed: boolean
+  warning?: boolean
+  error?: string
+}
+
+type TestRowState = {
+  label: string
+  status: TestStatus
+  error?: string
+}
+
+const TEST_KEYS = [
+  'auth_session',
+  'profile_exists',
+  'discover_feed',
+  'force_match',
+  'match_pending',
+  'unlock_messaging',
+  'match_messaging',
+  'send_message',
+  'message_persisted',
+  'locked_gate',
+  'daily_like_reset',
+] as const
+
+type TestKey = (typeof TEST_KEYS)[number]
+
+const TEST_LABELS: Record<TestKey, string> = {
+  auth_session: 'Auth session',
+  profile_exists: 'Profile exists',
+  discover_feed: 'Discover feed',
+  force_match: 'Force match',
+  match_pending: 'Match created (pending)',
+  unlock_messaging: 'Unlock messaging',
+  match_messaging: 'Match in messaging state',
+  send_message: 'Send message',
+  message_persisted: 'Message persisted',
+  locked_gate: 'Locked gate (RLS)',
+  daily_like_reset: 'Daily like reset',
+}
+
+function initialResults(): Record<TestKey, TestRowState> {
+  return TEST_KEYS.reduce((acc, key) => {
+    acc[key] = { label: TEST_LABELS[key], status: 'idle' }
+    return acc
+  }, {} as Record<TestKey, TestRowState>)
+}
+
+function pass(): TestResult {
+  return { passed: true }
+}
+
+function fail(error: string): TestResult {
+  return { passed: false, error }
+}
+
+function warn(error: string): TestResult {
+  return { passed: false, warning: true, error }
+}
+
 export default function DevScreen() {
+  if (!__DEV__) {
+    return <Redirect href="/(tabs)/profile" />
+  }
+
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState<ActionState>({})
+  const [results, setResults] = useState<Record<TestKey, TestRowState>>(initialResults)
+  const [running, setRunning] = useState(false)
+  const [simulating, setSimulating] = useState(false)
   const { matches, refetch } = useMatches()
 
   useEffect(() => {
@@ -34,6 +108,265 @@ export default function DevScreen() {
 
   function setActionLoading(key: string, val: boolean) {
     setLoading(prev => ({ ...prev, [key]: val }))
+  }
+
+  function setTestStatus(key: TestKey, status: TestStatus, error?: string) {
+    setResults(prev => ({
+      ...prev,
+      [key]: { label: TEST_LABELS[key], status, error },
+    }))
+  }
+
+  function clearResults() {
+    setResults(initialResults())
+  }
+
+  // Runs all 11 integration tests sequentially against the real Supabase
+  // backend. Each test can read state produced by the test before it
+  // (e.g. the match ID created by `force_match`), so order matters and we
+  // share scratch state through a mutable `ctx` object.
+  async function runAllTests() {
+    if (running) return
+    setRunning(true)
+    clearResults()
+
+    const ctx: {
+      userId: string | null
+      matchId: string | null
+      lockedMatchId: string | null
+    } = { userId: currentUserId, matchId: null, lockedMatchId: null }
+
+    const tests: { key: TestKey; run: () => Promise<TestResult> }[] = [
+      {
+        // 1 — a valid auth session must exist for everything else to work.
+        key: 'auth_session',
+        run: async () => {
+          const { data, error } = await supabase.auth.getSession()
+          if (error) return fail(error.message)
+          if (!data.session?.user) return fail('No active session')
+          ctx.userId = data.session.user.id
+          return pass()
+        },
+      },
+      {
+        // 2 — the current user must have a profiles row.
+        key: 'profile_exists',
+        run: async () => {
+          if (!ctx.userId) return fail('No user id from auth session')
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', ctx.userId)
+            .maybeSingle()
+          if (error) return fail(error.message)
+          if (!data) return fail('No profile row for current user')
+          return pass()
+        },
+      },
+      {
+        // 3 — mirror the Discover feed query (direct profiles-by-city query,
+        // matching useDiscover.ts). Returning >= 0 rows without error passes.
+        key: 'discover_feed',
+        run: async () => {
+          if (!ctx.userId) return fail('No user id from auth session')
+          const { data: myProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('city')
+            .eq('id', ctx.userId)
+            .single()
+          if (profileError) return fail(profileError.message)
+
+          const { error } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('city', myProfile.city)
+            .neq('id', ctx.userId)
+            .limit(20)
+          if (error) return fail(error.message)
+          return pass()
+        },
+      },
+      {
+        // 4 — force a match with the first test profile; expect a match id back.
+        key: 'force_match',
+        run: async () => {
+          if (!ctx.userId) return fail('No user id from auth session')
+          const { data, error } = await supabase.rpc('dev_force_match', {
+            p_user_a: ctx.userId,
+            p_user_b: TEST_PROFILES[0].id,
+          })
+          if (error) return fail(error.message)
+          if (!data || typeof data !== 'string') return fail('No match ID returned')
+          ctx.matchId = data
+          return pass()
+        },
+      },
+      {
+        // 5 — newly forced match should be in `pending` state.
+        key: 'match_pending',
+        run: async () => {
+          if (!ctx.matchId) return fail('No match ID from force match')
+          const { data, error } = await supabase
+            .from('matches')
+            .select('status')
+            .eq('id', ctx.matchId)
+            .single()
+          if (error) return fail(error.message)
+          if (data.status !== 'pending') {
+            return fail(`Expected status "pending", got "${data.status}"`)
+          }
+          return pass()
+        },
+      },
+      {
+        // 6 — unlocking should not error.
+        key: 'unlock_messaging',
+        run: async () => {
+          if (!ctx.matchId) return fail('No match ID from force match')
+          const { error } = await supabase.rpc('dev_unlock_messaging', {
+            p_match_id: ctx.matchId,
+          })
+          if (error) return fail(error.message)
+          return pass()
+        },
+      },
+      {
+        // 7 — after unlock the match should be in `messaging` state.
+        key: 'match_messaging',
+        run: async () => {
+          if (!ctx.matchId) return fail('No match ID from force match')
+          const { data, error } = await supabase
+            .from('matches')
+            .select('status')
+            .eq('id', ctx.matchId)
+            .single()
+          if (error) return fail(error.message)
+          if (data.status !== 'messaging') {
+            return fail(`Expected status "messaging", got "${data.status}"`)
+          }
+          return pass()
+        },
+      },
+      {
+        // 8 — insert a message on the unlocked match; expect no error.
+        key: 'send_message',
+        run: async () => {
+          if (!ctx.matchId) return fail('No match ID from force match')
+          if (!ctx.userId) return fail('No user id from auth session')
+          const { error } = await supabase.from('messages').insert({
+            match_id: ctx.matchId,
+            sender_id: ctx.userId,
+            content: `Test message ${new Date().toISOString()}`,
+          })
+          if (error) return fail(error.message)
+          return pass()
+        },
+      },
+      {
+        // 9 — read the message back to confirm it persisted.
+        key: 'message_persisted',
+        run: async () => {
+          if (!ctx.matchId) return fail('No match ID from force match')
+          const { data, error } = await supabase
+            .from('messages')
+            .select('id')
+            .eq('match_id', ctx.matchId)
+            .limit(1)
+          if (error) return fail(error.message)
+          if (!data || data.length === 0) return fail('No persisted message found')
+          return pass()
+        },
+      },
+      {
+        // 10 — force a second (pending) match and attempt to insert a message.
+        // The RLS policy should reject it. If the insert succeeds, RLS is not
+        // enforced yet — surface that as a warning, not a hard fail.
+        key: 'locked_gate',
+        run: async () => {
+          if (!ctx.userId) return fail('No user id from auth session')
+          const { data: lockedId, error: matchError } = await supabase.rpc(
+            'dev_force_match',
+            { p_user_a: ctx.userId, p_user_b: TEST_PROFILES[1].id }
+          )
+          if (matchError) return fail(matchError.message)
+          if (!lockedId || typeof lockedId !== 'string') {
+            return fail('No match ID returned for locked match')
+          }
+          ctx.lockedMatchId = lockedId
+
+          const { error } = await supabase.from('messages').insert({
+            match_id: lockedId,
+            sender_id: ctx.userId,
+            content: `Should be blocked ${new Date().toISOString()}`,
+          })
+          if (error) return pass() // expected: RLS blocked the insert
+          return warn('RLS not enforced — insert on pending match succeeded')
+        },
+      },
+      {
+        // 11 — reset daily likes; expect no error.
+        key: 'daily_like_reset',
+        run: async () => {
+          if (!ctx.userId) return fail('No user id from auth session')
+          const { error } = await supabase.rpc('dev_reset_daily_likes', {
+            p_user_id: ctx.userId,
+          })
+          if (error) return fail(error.message)
+          return pass()
+        },
+      },
+    ]
+
+    for (const test of tests) {
+      setTestStatus(test.key, 'running')
+      try {
+        const result = await test.run()
+        if (result.warning) {
+          setTestStatus(test.key, 'warn', result.error)
+        } else if (result.passed) {
+          setTestStatus(test.key, 'pass')
+        } else {
+          setTestStatus(test.key, 'fail', result.error)
+        }
+      } catch (e: any) {
+        setTestStatus(test.key, 'fail', e?.message ?? 'Unexpected error')
+      }
+    }
+
+    setRunning(false)
+    refetch()
+  }
+
+  // Simulates the *other* user sending a message so the realtime subscription
+  // in useMessages can be verified by navigating to the chat afterwards.
+  async function simulateIncomingMessage() {
+    if (simulating) return
+    setSimulating(true)
+    try {
+      const target = matches.find(m => m.status === 'messaging')
+      if (!target) {
+        Alert.alert(
+          'No messaging match',
+          'Force a match and unlock messaging first, then try again.'
+        )
+        return
+      }
+      const content = `Incoming test message ${new Date().toISOString()}`
+      const { error } = await supabase.rpc('dev_simulate_message', {
+        p_match_id: target.id,
+        p_content: content,
+        p_sender_id: SIMULATE_SENDER_ID,
+      })
+      if (error) throw error
+      Alert.alert(
+        'Message sent',
+        `Inserted into chat with ${target.otherProfile.name}. Open that chat to see it arrive via realtime.`
+      )
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to simulate message')
+    } finally {
+      setSimulating(false)
+    }
   }
 
   async function forceMatch(testProfileId: string, testName: string) {
@@ -227,6 +560,43 @@ export default function DevScreen() {
           />
         </Section>
 
+        {/* Integration Tests */}
+        <Section title="Integration Tests">
+          <Text style={styles.hint}>
+            Runs 11 checks against the live Supabase backend in order. Some tests
+            create real match and message rows on your account.
+          </Text>
+          <DevButton
+            label={running ? 'Running tests…' : 'Run all tests'}
+            loading={running}
+            onPress={runAllTests}
+          />
+          {TEST_KEYS.map(key => (
+            <TestRow key={key} row={results[key]} />
+          ))}
+          <TouchableOpacity
+            style={styles.clearBtn}
+            onPress={clearResults}
+            disabled={running}
+            activeOpacity={0.6}
+          >
+            <Text style={styles.clearBtnText}>Clear results</Text>
+          </TouchableOpacity>
+        </Section>
+
+        {/* Realtime */}
+        <Section title="Realtime">
+          <Text style={styles.hint}>
+            Inserts a message from a test profile into your first messaging match,
+            then open that chat to confirm it arrives via the realtime subscription.
+          </Text>
+          <DevButton
+            label="Simulate incoming message"
+            loading={simulating}
+            onPress={simulateIncomingMessage}
+          />
+        </Section>
+
         <Text style={styles.warning}>
           DEV ONLY — Remove this screen before App Store submission
         </Text>
@@ -280,6 +650,40 @@ function DevButton({
         : <Text style={[styles.devBtnText, small && styles.devBtnTextSmall]}>{label}</Text>
       }
     </TouchableOpacity>
+  )
+}
+
+function TestRow({ row }: { row: TestRowState }) {
+  const { label, status, error } = row
+
+  let statusText = '—'
+  let statusColor = Colors.mist
+  if (status === 'running') {
+    statusText = '…'
+    statusColor = Colors.ocean
+  } else if (status === 'pass') {
+    statusText = 'PASS'
+    statusColor = Colors.verified
+  } else if (status === 'fail') {
+    statusText = 'FAIL'
+    statusColor = '#C0392B'
+  } else if (status === 'warn') {
+    statusText = 'WARN'
+    statusColor = '#E67E22'
+  }
+
+  return (
+    <View style={styles.testRow}>
+      <View style={styles.testRowMain}>
+        <View style={styles.testRowHeader}>
+          <Text style={styles.testName}>{label}</Text>
+          <Text style={[styles.testStatus, { color: statusColor }]}>{statusText}</Text>
+        </View>
+        {!!error && (status === 'fail' || status === 'warn') && (
+          <Text style={styles.testError}>{error}</Text>
+        )}
+      </View>
+    </View>
   )
 }
 
@@ -395,5 +799,47 @@ const styles = StyleSheet.create({
     color: Colors.mist,
     textAlign: 'center',
     marginTop: 8,
+  },
+  testRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderTopWidth: 0.5,
+    borderTopColor: Colors.haze,
+  },
+  testRowMain: {
+    flex: 1,
+  },
+  testRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  testName: {
+    fontSize: 14,
+    color: Colors.navy,
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 8,
+  },
+  testStatus: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  testError: {
+    fontSize: 12,
+    color: Colors.mist,
+    marginTop: 3,
+  },
+  clearBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+    marginTop: 2,
+  },
+  clearBtnText: {
+    fontSize: 13,
+    color: Colors.mist,
+    fontWeight: '600',
   },
 })
