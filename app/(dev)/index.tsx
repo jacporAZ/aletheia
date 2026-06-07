@@ -88,11 +88,16 @@ function warn(error: string): TestResult {
   return { passed: false, warning: true, error }
 }
 
+// Gate the route with NO hooks here so the conditional return is legal under
+// the Rules of Hooks. All hooks live in DevScreenInner, which only renders in dev.
 export default function DevScreen() {
   if (!__DEV__) {
     return <Redirect href="/(tabs)/profile" />
   }
+  return <DevScreenInner />
+}
 
+function DevScreenInner() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState<ActionState>({})
   const [results, setResults] = useState<Record<TestKey, TestRowState>>(initialResults)

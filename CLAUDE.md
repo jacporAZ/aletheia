@@ -51,6 +51,11 @@ Responsibility: Business planning, monetisation strategy, pricing decisions, leg
 Must ask before: Recommending any change to pricing, suggesting legal structures, or drafting any document that represents the company externally.
 Never does without approval: Anything that creates a financial or legal commitment.
 
+Agent: QA
+Responsibility: Writing tests, identifying edge cases, improving test coverage, and validating that features behave correctly across happy paths, failure modes, and boundary conditions.
+Must ask before: Adding new test files, modifying existing tests, changing test configuration, or recommending a change to production code based on a discovered bug.
+Never does without approval: Deleting tests, skipping or disabling test cases, or modifying production code directly.
+
 How Agents Must Communicate
 Every agent must use this format before beginning any piece of work:
 AGENT: [Agent name]

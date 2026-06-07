@@ -75,8 +75,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: Colors.ocean,
+    fontWeight: '600',
+    color: Colors.navy,
   },
   list: {
     paddingVertical: 8,
