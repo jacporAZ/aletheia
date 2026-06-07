@@ -21,7 +21,7 @@ export function useVouch() {
         .from('vouches')
         .select('*, vouchedProfile:profiles!vouches_vouched_user_id_fkey(*)')
         .eq('voucher_id', user.id)
-      if (fetchError) throw fetchError
+      if (fetchError) throw new Error('Failed to load vouches')
 
       setMyVouches((data ?? []).map((v: any) => ({
         id: v.id,
@@ -43,6 +43,7 @@ export function useVouch() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return { canVouch: false, reason: 'Not authenticated' }
+      if (user.id === voucheeId) return { canVouch: false, reason: 'You cannot vouch for yourself' }
 
       const [
         { data: match },
@@ -85,8 +86,8 @@ export function useVouch() {
       }
 
       return { canVouch: true }
-    } catch (e: any) {
-      return { canVouch: false, reason: e.message }
+    } catch {
+      return { canVouch: false, reason: 'Unable to verify vouch eligibility' }
     }
   }
 
@@ -95,6 +96,7 @@ export function useVouch() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
+      if (user.id === voucheeId) throw new Error('You cannot vouch for yourself')
 
       const check = await canVouch(voucheeId)
       if (!check.canVouch) throw new Error(check.reason ?? 'Cannot vouch')
@@ -102,9 +104,8 @@ export function useVouch() {
       const { error: insertError } = await supabase
         .from('vouches')
         .insert({ voucher_id: user.id, vouched_user_id: voucheeId })
-      if (insertError) throw insertError
+      if (insertError) throw new Error('Failed to submit vouch')
 
-      console.log(`[NOTIFICATION] Would notify ${voucheeId} that ${user.id} vouched for them`)
       await fetchVouches()
     } catch (e: any) {
       setError(e.message ?? 'Failed to submit vouch')

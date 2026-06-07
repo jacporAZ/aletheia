@@ -8,6 +8,15 @@ import { useRouter } from 'expo-router'
 import { ShieldCheck, Users, Bell, Settings, ChevronRight } from 'lucide-react-native'
 import { supabase } from '../../lib/supabase'
 import { useProfile } from '../../lib/hooks/useProfile'
+import {
+  MAX_BIO_LENGTH,
+  MAX_CITY_LENGTH,
+  MAX_NAME_LENGTH,
+  validateProfileInput,
+  validateSelectedPhoto,
+  sanitizeMultilineInput,
+  sanitizeSingleLineInput,
+} from '../../lib/security'
 import { Colors } from '../../constants/colors'
 
 const __DEV__ = process.env.NODE_ENV !== 'production'
@@ -50,23 +59,48 @@ export default function ProfileScreen() {
       quality: 0.8,
     })
     if (!result.canceled) {
-      setPhotos(prev => [...prev, result.assets[0].uri])
+      const asset = result.assets[0]
+      const validationError = validateSelectedPhoto(asset)
+      if (validationError) {
+        Alert.alert('Invalid photo', validationError)
+        return
+      }
+      setPhotos(prev => [...prev, asset.uri])
     }
   }
 
   async function handleSave() {
+    const sanitizedName = sanitizeSingleLineInput(name)
+    const sanitizedCity = sanitizeSingleLineInput(city)
+    const sanitizedBio = sanitizeMultilineInput(bio)
     const ageNum = parseInt(age, 10)
-    if (!name.trim()) { Alert.alert('Required', 'Name cannot be empty.'); return }
-    if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) { Alert.alert('Invalid age', 'Enter a valid age (18–100).'); return }
-    if (!city.trim()) { Alert.alert('Required', 'City cannot be empty.'); return }
-    if (!gender) { Alert.alert('Required', 'Please select your gender.'); return }
+    const validationError = validateProfileInput({
+      name: sanitizedName,
+      age: ageNum,
+      city: sanitizedCity,
+      bio: sanitizedBio,
+      gender,
+      photoCount: photos.length,
+    })
+
+    if (validationError) {
+      Alert.alert('Invalid profile', validationError)
+      return
+    }
 
     setSaving(true)
     try {
       const uploadedUrls = await Promise.all(
         photos.map(uri => uri.startsWith('http') ? Promise.resolve(uri) : uploadPhoto(uri))
       )
-      await saveProfile({ name: name.trim(), age: ageNum, bio: bio.trim(), city: city.trim(), photos: uploadedUrls, gender: gender ?? undefined })
+      await saveProfile({
+        name: sanitizedName,
+        age: ageNum,
+        bio: sanitizedBio,
+        city: sanitizedCity,
+        photos: uploadedUrls,
+        gender: gender ?? undefined,
+      })
       setEditing(false)
       refetch()
     } catch (e: any) {
@@ -132,9 +166,9 @@ export default function ProfileScreen() {
       {/* Fields */}
       {editing ? (
         <>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={Colors.mist} />
+          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" placeholderTextColor={Colors.mist} maxLength={MAX_NAME_LENGTH} />
           <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="Age" placeholderTextColor={Colors.mist} keyboardType="number-pad" maxLength={3} />
-          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={Colors.mist} />
+          <TextInput style={styles.input} value={city} onChangeText={setCity} placeholder="City" placeholderTextColor={Colors.mist} maxLength={MAX_CITY_LENGTH} />
           <Text style={styles.label}>I am a</Text>
           <View style={styles.genderRow}>
             {(['male', 'female', 'other'] as const).map(option => (
@@ -149,7 +183,7 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Bio" placeholderTextColor={Colors.mist} multiline numberOfLines={4} />
+          <TextInput style={[styles.input, styles.bio]} value={bio} onChangeText={setBio} placeholder="Bio" placeholderTextColor={Colors.mist} multiline numberOfLines={4} maxLength={MAX_BIO_LENGTH} />
 
           <View style={styles.row}>
             <TouchableOpacity style={styles.cancelBtn} onPress={handleCancel}>

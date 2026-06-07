@@ -4,6 +4,13 @@ import {
   StyleSheet, Alert, KeyboardAvoidingView, Platform
 } from 'react-native'
 import { supabase } from '../../lib/supabase'
+import {
+  getGenericAuthErrorMessage,
+  isValidEmail,
+  isValidPassword,
+  MIN_PASSWORD_LENGTH,
+  sanitizeSingleLineInput,
+} from '../../lib/security'
 import { Colors } from '../../constants/colors'
 import { useRouter } from 'expo-router'
 
@@ -14,29 +21,33 @@ export default function Register() {
   const [loading, setLoading] = useState(false)
 
   async function handleRegister() {
-    const trimmedEmail = email.trim()
-    const trimmedPassword = password.trim()
+    const trimmedEmail = sanitizeSingleLineInput(email)
 
     if (!trimmedEmail) {
       Alert.alert('Missing email', 'Please enter your email address.')
       return
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    if (!isValidEmail(trimmedEmail)) {
       Alert.alert('Invalid email', 'Please enter a valid email address.')
       return
     }
-    if (trimmedPassword.length < 6) {
-      Alert.alert('Password too short', 'Password must be at least 6 characters.')
+    if (!isValidPassword(password)) {
+      Alert.alert('Password too weak', `Password must be ${MIN_PASSWORD_LENGTH}–72 characters.`)
       return
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.signUp({ email: trimmedEmail, password: trimmedPassword })
-    setLoading(false)
-    if (error) {
-      Alert.alert('Registration failed', error.message)
-    } else {
+    try {
+      const { error } = await supabase.auth.signUp({ email: trimmedEmail, password })
+      if (error) {
+        Alert.alert('Registration failed', getGenericAuthErrorMessage('register'))
+        return
+      }
       Alert.alert('Check your email', 'We sent you a confirmation link.')
+    } catch {
+      Alert.alert('Registration failed', getGenericAuthErrorMessage('register'))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -55,7 +66,10 @@ export default function Register() {
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
         keyboardType="email-address"
+        textContentType="emailAddress"
       />
       <TextInput
         style={styles.input}
@@ -64,6 +78,8 @@ export default function Register() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        autoCorrect={false}
+        textContentType="newPassword"
       />
 
       <TouchableOpacity

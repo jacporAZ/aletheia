@@ -4,6 +4,11 @@ import {
   StyleSheet, Alert, KeyboardAvoidingView, Platform
 } from 'react-native'
 import { supabase } from '../../lib/supabase'
+import {
+  getGenericAuthErrorMessage,
+  isValidEmail,
+  sanitizeSingleLineInput,
+} from '../../lib/security'
 import { Colors } from '../../constants/colors'
 import { useRouter } from 'expo-router'
 
@@ -14,13 +19,32 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
 
   async function handleLogin() {
+    const trimmedEmail = sanitizeSingleLineInput(email)
+
+    if (!trimmedEmail || !password) {
+      Alert.alert('Missing details', 'Please enter both your email and password.')
+      return
+    }
+    if (!isValidEmail(trimmedEmail)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.')
+      return
+    }
+
     setLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) {
-      Alert.alert('Error', error.message)
-    } else {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      })
+      if (error) {
+        Alert.alert('Sign in failed', getGenericAuthErrorMessage('login'))
+        return
+      }
       router.replace('/(tabs)/discover')
+    } catch {
+      Alert.alert('Sign in failed', getGenericAuthErrorMessage('login'))
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -39,7 +63,10 @@ export default function Login() {
         value={email}
         onChangeText={setEmail}
         autoCapitalize="none"
+        autoCorrect={false}
+        autoComplete="email"
         keyboardType="email-address"
+        textContentType="username"
       />
       <TextInput
         style={styles.input}
@@ -48,6 +75,8 @@ export default function Login() {
         value={password}
         onChangeText={setPassword}
         secureTextEntry
+        autoCorrect={false}
+        textContentType="password"
       />
 
       <TouchableOpacity
